@@ -105,15 +105,15 @@ void printGates(Gate* g, int numberOfGatesToPrint) {
 
 		} else if (g[i].index1 == g[i].index2) {
 			fprintf(pFile, "R%i*%i(%lf)\n", g[i].index1, g[i].direction,
-					g[i].parameter);
+					g[i].parameter.x);
 
 		} else if (g[i].index2 - g[i].index1 == 1
 				&& comparecuDoubleComplex(g[i].parameter, k) == 1) {
-			fprintf(pFile, "swap%i%i\n", g[i].index1, g[i].index2,
-					g[i].parameter);
+			fprintf(pFile, "swap%i%i%lf\n", g[i].index1, g[i].index2,
+					g[i].parameter.x);
 		} else {
 			fprintf(pFile, "J%i%i(%lf)\n", g[i].index1, g[i].index2,
-					g[i].parameter);
+					g[i].parameter.x);
 		}
 
 	}
@@ -153,12 +153,11 @@ void GPUGA(curandState *devStates) {
 			2 * sizeOfChromosome * sizeOfPopulation * size * size
 					* sizeof(cuDoubleComplex));
 	cudaMalloc((void **) &(billets),
-			sizeOfChromosome * sizeOfPopulation * 4 * 4
-					* sizeof(cuDoubleComplex));
+	sizeOfChromosome * sizeOfPopulation * 4 * 4 * sizeof(cuDoubleComplex));
 	cudaMalloc((void **) &(gpufitness),
-			sizeOfChromosome * sizeOfPopulation * sizeof(float));
+	sizeOfChromosome * sizeOfPopulation * sizeof(float));
 	cudaMalloc((void **) &(tempFitness),
-			sizeOfPopulation * size * size * sizeof(cuDoubleComplex));
+	sizeOfPopulation * size * size * sizeof(cuDoubleComplex));
 	cudaMalloc((void **) &(tempdata),
 			sizeOfChromosome * sizeOfPopulation * size * size
 					* sizeof(cuDoubleComplex));
@@ -199,20 +198,24 @@ void GPUGA(curandState *devStates) {
 			x = tempdata;
 		clearFitness<<<blocksPerGrid, threadsPerBlock>>>(gpufitness);
 		cudaDeviceSynchronize();
-		cudaMemset(tempFitness, 0, size * size * sizeof(cuDoubleComplex));
-//		evaluateFitnessReversible<<<blocksPerGrid, threadsPerBlock>>>(x, Target, gpufitness, size);
-		evaluateFitnessQuantum(x, Target, size, size, size, tempFitness, size,
-				fitness, &handle,solut);
-		cudaDeviceSynchronize();
-		if (i == 0) break;
-//		uncomment this if doing reversible
-//		invertFitness<<<blocksPerGrid, threadsPerBlock>>>(gpufitness, solut);
+		if (REVERSIBLEFITNESS == 1) {
+			evaluateFitnessReversible<<<blocksPerGrid, threadsPerBlock>>>(x, Target, gpufitness, size);
+			cudaDeviceSynchronize();
+			invertFitness<<<blocksPerGrid, threadsPerBlock>>>(gpufitness, solut);
+		} else
+		{
+			cudaMemset(tempFitness, 0, size * size * sizeof(cuDoubleComplex));
+			evaluateFitnessQuantum(x, Target, size, size, size, tempFitness, size,
+					fitness, &handle,solut);
+		}
 		cudaDeviceSynchronize();
 		if (i % checkEach == 0) {
 			clock_t end = clock();
 			seconds = double(end - begin) / CLOCKS_PER_SEC;
-//			uncomment this if doing reversible
-//			cudaMemcpy(fitness, gpufitness, sizeOfPopulation * sizeof(float), cudaMemcpyDeviceToHost);
+			if (REVERSIBLEFITNESS == 1) {
+				cudaMemcpy(fitness, gpufitness,
+				sizeOfPopulation * sizeof(float), cudaMemcpyDeviceToHost);
+			}
 			float aver = 0.0;
 			float max = 0.0;
 			iom = 0;
@@ -235,7 +238,7 @@ void GPUGA(curandState *devStates) {
 				fprintf(pFile, "%i iteration, bestfitness is %lf\n", i,
 						bestfitness);
 				fprintf(pFile, "Time for %i iteration(s)  is %lf seconds \n",
-						checkEach, seconds);
+				checkEach, seconds);
 				fclose(pFile);
 				fillWithZeros(B, size, size);
 				cudaMemcpy(DeviceMemory_h, x + ioam * size * size,
@@ -244,12 +247,12 @@ void GPUGA(curandState *devStates) {
 				printm(DeviceMemory_h, size, size, 1);
 
 				cudaMemcpy(population, dev_population,
-						sizeOfPopulation * sizeOfChromosome * sizeof(Gate),
+				sizeOfPopulation * sizeOfChromosome * sizeof(Gate),
 						cudaMemcpyDeviceToHost);
 				printGates(population + ioam * sizeOfChromosome,
-						sizeOfChromosome);
+				sizeOfChromosome);
 				printGatesMatlab(population + ioam * sizeOfChromosome,
-						sizeOfChromosome);
+				sizeOfChromosome);
 			}
 			if (verbose == 1) {
 				printf(
@@ -292,10 +295,10 @@ void GPUGA(curandState *devStates) {
 				size * size * sizeof(cuDoubleComplex), cudaMemcpyDeviceToHost);
 		printm(DeviceMemory_h, size, size, 1);
 		cudaMemcpy(population, dev_population,
-				sizeOfPopulation * sizeOfChromosome * sizeof(Gate),
+		sizeOfPopulation * sizeOfChromosome * sizeof(Gate),
 				cudaMemcpyDeviceToHost);
 		printGatesMatlab(population + *solut * sizeOfChromosome,
-				sizeOfChromosome);
+		sizeOfChromosome);
 	}
 }
 
@@ -329,19 +332,18 @@ int main(void) {
 	size = pow(2, numberOfWires);
 	population = new Gate[sizeOfChromosome * sizeOfPopulation];
 	cudaMalloc((void **) &dev_population,
-			sizeOfPopulation * sizeOfChromosome * sizeof(Gate));
+	sizeOfPopulation * sizeOfChromosome * sizeof(Gate));
 	cudaMalloc((void **) &temp_population,
-			sizeOfPopulation * sizeOfChromosome * sizeof(Gate));
+	sizeOfPopulation * sizeOfChromosome * sizeof(Gate));
 	cudaMalloc((void **) &fitness, sizeOfPopulation * sizeof(float));
 	cudaMalloc((void **) &tempfitness, sizeOfPopulation * sizeof(float));
 	cudaMalloc(&devStates,
-			sizeOfChromosome * sizeOfPopulation * sizeof(curandState));
+	sizeOfChromosome * sizeOfPopulation * sizeof(curandState));
 	setup_kernel<<<blocksPerGrid, threadsPerBlock>>>(devStates, time(NULL));
 	generatePopulationDev<<<blocksPerGrid, threadsPerBlock>>>(dev_population, devStates);
 	cudaDeviceSynchronize();
 	cudaMemcpy(population, dev_population,
-			sizeOfPopulation * sizeOfChromosome * sizeof(Gate),
-			cudaMemcpyDeviceToHost);
+	sizeOfPopulation * sizeOfChromosome * sizeof(Gate), cudaMemcpyDeviceToHost);
 
 	solution = NULL;
 	fitness = new float[sizeOfPopulation];

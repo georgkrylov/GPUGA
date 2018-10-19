@@ -533,25 +533,24 @@ void evaluateFitnessQuantum(cuDoubleComplex * Data, cuDoubleComplex * Target,
 	const cuDoubleComplex *alpha = &alf;
 	const cuDoubleComplex *beta = &bet;
 	int i;
+	int dSize = size * size * sizeOfPopulation;
+	cuDoubleComplex hData[dSize];
+	cudaMemcpy(hData, Data, dSize * sizeof(cuDoubleComplex),
+			cudaMemcpyDeviceToHost);
+
 	for (i = 0; i < sizeOfPopulation; i++) {
 		cublasZgemm(handle, CUBLAS_OP_C, CUBLAS_OP_N, m, n, k, alpha, Target,
 				lda, Data + size * size * i, ldb, beta,
 				tempfitness + size * size * i, ldc);
 	}
-	for (i = 0 ; i < sizeOfPopulation; i++){
-		printf("Individual number %i\n", i);
-		for (int j = 0 ; j < size; j++){
-			for (int k = 0; k < size; k++){
-				printf("%lf + %lf + j ", cuCreal(tempfitness[size*size*i+j*size+k]),cuCimag(tempfitness[size*size*i+j*size+k]));
-			}
-			printf("\n");
-		}
-	}
+
+
 	cudaDeviceSynchronize();
-	int dSize = size * size * sizeOfPopulation;
-	cuDoubleComplex hData[dSize];
+	memset(hData,0,dSize*sizeof(cuDoubleComplex));
+
 	cudaMemcpy(hData, tempfitness, dSize * sizeof(cuDoubleComplex),
 			cudaMemcpyDeviceToHost);
+
 	for (i = 0; i < sizeOfPopulation; i++) {
 		cuDoubleComplex tSum = make_cuDoubleComplex(0, 0);
 		int j;
@@ -561,6 +560,7 @@ void evaluateFitnessQuantum(cuDoubleComplex * Data, cuDoubleComplex * Target,
 		}
 		fitness[i] = cuCabs(tSum);
 	}
+
 	for (i = 0; i < sizeOfPopulation; i++) {
 		fitness[i] = 1-(float) sqrt((size * 1.0 - fitness[i]) / (size));
 		if (fitness[i] == 1)
