@@ -15,7 +15,7 @@ and build it.
 Execution instructions:
 Make sure parameters of algorithm (contained in the parameters.h) are matching 
 the target defined in Target.txt. If they do not, after modification of 
-parameters.h you will have to run
+parameters.h you will have to rebuild the project
 
 
 
