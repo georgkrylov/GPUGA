@@ -362,10 +362,12 @@ int main(void) {
 				double real;
 				double imag;
 
-				fscanf(rFile, "%lf", &real);
-				fscanf(rFile, "%lf", &imag);
-
-				Target_h[i * size + j] = make_cuDoubleComplex(real, imag);
+				if(fscanf(rFile, "%lf", &real) && fscanf(rFile, "%lf", &imag) == 1)
+					Target_h[i * size + j] = make_cuDoubleComplex(real, imag);
+				else {
+					printf("Failed to read Target file.\n");
+					exit(-1);
+				}
 			}
 		}
 		fclose(rFile);
