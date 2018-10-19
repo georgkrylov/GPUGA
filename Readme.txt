@@ -9,7 +9,8 @@ https://ieeexplore.ieee.org/document/7964993/
 
 Compilation instructions
 Import as eclipse project or create new cuda eclipse project, copy src files 
-there, link cublas, set compute_capability >=3.5 and build it.
+there, link cublas, set compute_capability >=3.5, enable separate compilation
+and build it.
 
 Execution instructions:
 Make sure parameters of algorithm (contained in the parameters.h) are matching 
