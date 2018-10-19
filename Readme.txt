@@ -1,3 +1,7 @@
+
+#Temporary not working. Create new cuda eclipse project, copy src files there
+#link cublas, set compute_capability >=3.5 and build it.
+
 Brief description:
 This is a working version of the software that was used in the research for 
 synthesis of quantum circuits.To read more in details refer to 
